@@ -19,24 +19,17 @@ jobs:
           sudo apt-get install -y python3-pip build-essential git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev automake libltdl-dev
           pip install buildozer==1.5.0 cython==0.29.33 python-for-android==2023.9.16
 
-      - name: Prepare NDK and sounds folder
+    - name: Prepare NDK and sounds folder
         run: |
           mkdir -p ~/.buildozer/android/platform
           mkdir -p sounds
           mv *.mp3 *.wav sounds/ 2>/dev/null || true
           wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
           unzip -q android-ndk-r25b-linux.zip -d ~/.buildozer/android/platform/
-          python3 -c "
-          import re
-          f = open('/home/runner/.local/lib/python3.10/site-packages/buildozer/targets/android.py')
-          c = f.read()
-          f.close()
-          c = c.replace(\"DEFAULT_ANDROID_NDK_VERSION = '17c'\", \"DEFAULT_ANDROID_NDK_VERSION = '25b'\")
-          f = open('/home/runner/.local/lib/python3.10/site-packages/buildozer/targets/android.py', 'w')
-          f.write(c)
-          f.close()
-          print('NDK parcheado a r25b')
-          "
+          ANDROID_PY=$(find / -name "android.py" -path "*/buildozer/targets/*" 2>/dev/null | head -1)
+          echo "buildozer android.py encontrado en: $ANDROID_PY"
+          sed -i "s/DEFAULT_ANDROID_NDK_VERSION = '17c'/DEFAULT_ANDROID_NDK_VERSION = '25b'/" $ANDROID_PY
+          grep "DEFAULT_ANDROID_NDK_VERSION" $ANDROID_PY
 
       - name: Build APK
         env:
