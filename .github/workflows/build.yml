@@ -8,67 +8,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y python3-pip build-essential git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev automake libltdl-dev
-          pip install buildozer==1.5.0 cython==0.29.33
-          pip install python-for-android==2023.9.16
-
-      - name: Prepare files
+      - name: Prepare sounds folder
         run: |
           mkdir -p sounds
           mv *.mp3 *.wav sounds/ 2>/dev/null || true
-          mkdir -p /home/runner/.buildozer/android/platform
-          wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
-          rm -rf /home/runner/.buildozer/android/platform/android-ndk-r25b
-          unzip -q android-ndk-r25b-linux.zip -d /home/runner/.buildozer/android/platform/
-          ANDROID_PY=$(find / -name "android.py" -path "*/buildozer/targets/*" 2>/dev/null | head -1)
-          echo "Patching: $ANDROID_PY"
-          sed -i "s/DEFAULT_ANDROID_NDK_VERSION = '17c'/DEFAULT_ANDROID_NDK_VERSION = '25b'/" "$ANDROID_PY"
-          grep "DEFAULT_ANDROID_NDK_VERSION" "$ANDROID_PY"
-          cat > buildozer.spec << 'EOF'
-          [app]
-          title = Hidratacion de Ranita
-          package.name = hidratacionranita
-          package.domain = org.ranita
-          source.dir = .
-          source.include_exts = py,png,jpg,kv,atlas,mp3,wav,ttf,json
-          version = 1.4
-          requirements = python3,kivy==2.2.1
-          orientation = portrait
-          fullscreen = 0
-          icon.filename = %(source.dir)s/icon.png
-          [buildozer]
-          log_level = 2
-          warn_on_root = 1
-          [app:android]
-          android.api = 31
-          android.minapi = 21
-          android.ndk = 25b
-          android.archs = arm64-v8a
-          android.permissions = VIBRATE,WAKE_LOCK
-          android.accept_sdk_license = True
-          p4a.bootstrap = sdl2
-          EOF
-          ANDROID_PY=$(find / -name "android.py" -path "*/buildozer/targets/*" 2>/dev/null | head -1)
-          sed -i "s/DEFAULT_ANDROID_NDK_VERSION = '17c'/DEFAULT_ANDROID_NDK_VERSION = '25b'/" "$ANDROID_PY"
-          wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
-          unzip -q android-ndk-r25b-linux.zip -d ~/.buildozer/android/platform/
 
-      - name: Build APK
-        env:
-          ANDROIDNDK: /home/runner/.buildozer/android/platform/android-ndk-r25b
+      - name: Update buildozer.spec
         run: |
-          yes | buildozer android debug
+          cat > buildozer.spec << 'EOF'
+[app]
+title = Hidratacion de Ranita
+package.name = hidratacionranita
+package.domain = org.ranita
+source.dir = .
+source.include_exts = py,png,jpg,kv,atlas,mp3,wav,ttf,json
+version = 1.4
+requirements = python3,kivy==2.2.1
+orientation = portrait
+fullscreen = 0
+icon.filename = %(source.dir)s/icon.png
+[buildozer]
+log_level = 2
+warn_on_root = 1
+[app:android]
+android.api = 31
+android.minapi = 21
+android.ndk = 25b
+android.archs = arm64-v8a
+android.permissions = VIBRATE,WAKE_LOCK
+android.accept_sdk_license = True
+p4a.bootstrap = sdl2
+EOF
+
+      - name: Build with Buildozer Action
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          command: android debug
+          buildozer_version: stable
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Hidratacion-v1.4
-          path: bin/*.apk
+          path: ${{ steps.buildozer.outputs.filename }}
