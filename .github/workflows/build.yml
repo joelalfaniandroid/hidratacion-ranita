@@ -24,6 +24,13 @@ jobs:
         run: |
           mkdir -p sounds
           mv *.mp3 *.wav sounds/ 2>/dev/null || true
+          mkdir -p /home/runner/.buildozer/android/platform
+          wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+          unzip -q android-ndk-r25b-linux.zip -d /home/runner/.buildozer/android/platform/
+          ANDROID_PY=$(find / -name "android.py" -path "*/buildozer/targets/*" 2>/dev/null | head -1)
+          echo "Patching: $ANDROID_PY"
+          sed -i "s/DEFAULT_ANDROID_NDK_VERSION = '17c'/DEFAULT_ANDROID_NDK_VERSION = '25b'/" "$ANDROID_PY"
+          grep "DEFAULT_ANDROID_NDK_VERSION" "$ANDROID_PY"
           cat > buildozer.spec << 'EOF'
           [app]
           title = Hidratacion de Ranita
