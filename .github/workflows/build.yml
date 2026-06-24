@@ -8,15 +8,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Prepare sounds folder
+      - name: Prepare files
         run: |
           mkdir -p sounds
           mv *.mp3 *.wav sounds/ 2>/dev/null || true
-
-      - name: Update buildozer.spec
-        run: |
-          cat > buildozer.spec << 'EOF'
-[app]
+          python3 -c "
+          spec = '''[app]
 title = Hidratacion de Ranita
 package.name = hidratacionranita
 package.domain = org.ranita
@@ -37,8 +34,10 @@ android.ndk = 25b
 android.archs = arm64-v8a
 android.permissions = VIBRATE,WAKE_LOCK
 android.accept_sdk_license = True
-p4a.bootstrap = sdl2
-EOF
+p4a.bootstrap = sdl2'''
+open('buildozer.spec','w').write(spec)
+print('spec written')
+"
 
       - name: Build with Buildozer Action
         uses: ArtemSBulgakov/buildozer-action@v1
