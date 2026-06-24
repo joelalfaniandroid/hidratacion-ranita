@@ -17,24 +17,45 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y python3-pip build-essential git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake libffi-dev libssl-dev automake libltdl-dev
-          pip install buildozer==1.5.0 cython==0.29.33 python-for-android==2023.9.16
+          pip install buildozer==1.5.0 cython==0.29.33
+          pip install https://github.com/kivy/python-for-android/archive/refs/tags/v2023.9.16.zip
 
-      - name: Prepare sounds folder and NDK
+      - name: Prepare files
         run: |
           mkdir -p sounds
           mv *.mp3 *.wav sounds/ 2>/dev/null || true
-          mkdir -p ~/.buildozer/android/platform
+          cat > buildozer.spec << 'EOF'
+          [app]
+          title = Hidratacion de Ranita
+          package.name = hidratacionranita
+          package.domain = org.ranita
+          source.dir = .
+          source.include_exts = py,png,jpg,kv,atlas,mp3,wav,ttf,json
+          version = 1.4
+          requirements = python3,kivy==2.2.1
+          orientation = portrait
+          fullscreen = 0
+          icon.filename = %(source.dir)s/icon.png
+          [buildozer]
+          log_level = 2
+          warn_on_root = 1
+          [app:android]
+          android.api = 31
+          android.minapi = 21
+          android.ndk = 25b
+          android.archs = arm64-v8a
+          android.permissions = VIBRATE,WAKE_LOCK
+          android.accept_sdk_license = True
+          p4a.bootstrap = sdl2
+          EOF
+          ANDROID_PY=$(find / -name "android.py" -path "*/buildozer/targets/*" 2>/dev/null | head -1)
+          sed -i "s/DEFAULT_ANDROID_NDK_VERSION = '17c'/DEFAULT_ANDROID_NDK_VERSION = '25b'/" "$ANDROID_PY"
           wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
           unzip -q android-ndk-r25b-linux.zip -d ~/.buildozer/android/platform/
-          ANDROID_PY=$(find / -name "android.py" -path "*/buildozer/targets/*" 2>/dev/null | head -1)
-          echo "Found: $ANDROID_PY"
-          sed -i "s/DEFAULT_ANDROID_NDK_VERSION = '17c'/DEFAULT_ANDROID_NDK_VERSION = '25b'/" "$ANDROID_PY"
-          grep "DEFAULT_ANDROID_NDK_VERSION" "$ANDROID_PY"
 
       - name: Build APK
         env:
           ANDROIDNDK: /home/runner/.buildozer/android/platform/android-ndk-r25b
-          ANDROIDAPI: "33"
         run: |
           yes | buildozer android debug
 
